@@ -249,6 +249,37 @@ def add_configs(configs):
     return added, duplicate
 
 
+async def notify_new_configs(context):
+    conn = db()
+
+    users = conn.execute(
+        "SELECT user_id FROM users"
+    ).fetchall()
+
+    conn.close()
+
+    message = (
+        "🆕 <b>کانفیگ‌های جدید اضافه شد!</b>\n\n"
+        "📥 برای دریافت کانفیگ‌های جدید روی دکمه "
+        "<b>📥 دریافت کانفیگ</b> بزن ❤️"
+    )
+
+    for row in users:
+        try:
+            await context.bot.send_message(
+                chat_id=row["user_id"],
+                text=message,
+                parse_mode="HTML",
+                reply_markup=USER_MENU,
+            )
+        except Exception as e:
+            logger.warning(
+                "Could not notify user %s: %s",
+                row["user_id"],
+                e,
+            )
+
+
 def delete_all_configs():
     conn = db()
 
@@ -641,6 +672,9 @@ async def handle_admin_action(update, context):
         added, duplicate = add_configs(
             configs
         )
+
+        if added > 0:
+            await notify_new_configs(context)
 
         context.user_data.pop(
             "admin_action",
